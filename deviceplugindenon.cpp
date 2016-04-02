@@ -93,9 +93,9 @@ DeviceManager::DeviceError DevicePluginDenon::executeAction(Device *device, cons
             qCDebug(dcDenon) << "power: " << action.param("power").value().Bool;
 
             if (action.param("power").value().Bool == true){
-                denon->sendData("PWON\\r");
+                denon->sendData("PWON\r");
             } else {
-                denon->sendData("PWSTANDBY\\r");
+                denon->sendData("PWSTANDBY\r");
             }
 
             // Tell the DeviceManager that this is an async action and the result of the execution will
@@ -104,7 +104,7 @@ DeviceManager::DeviceError DevicePluginDenon::executeAction(Device *device, cons
         } else if (action.actionTypeId() == volumeActionTypeId) {
 
             QByteArray vol = action.param("volume").value().toByteArray();
-            QByteArray cmd = "MV" + vol + "\\r";
+            QByteArray cmd = "MV" + vol + "\r";
 
             qCDebug(dcDenon) << "Execute volume" << action.id() << cmd;
             denon->sendData(cmd);
@@ -114,7 +114,7 @@ DeviceManager::DeviceError DevicePluginDenon::executeAction(Device *device, cons
             qCDebug(dcDenon) << "Execute update action" << action.id();
 
             QByteArray channel = action.param("channel").value().toByteArray();
-            QByteArray cmd = "MS" + channel + "\\r";
+            QByteArray cmd = "MS" + channel + "\r";
 
             qCDebug(dcDenon) << "Change to channel:" << cmd;
             denon->sendData(cmd);

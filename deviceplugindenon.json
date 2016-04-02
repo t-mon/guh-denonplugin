@@ -44,7 +44,7 @@
                             "id": "773636b9-304d-463a-8755-fc7488dc0ff3",
                             "idName": "volume",
                             "type": "int",
-                            "unit": "Decibel",
+                            "unit": "Dezibel",
                             "defaultValue": "0",
                             "minValue": 0,
                             "maxValue": 80,
