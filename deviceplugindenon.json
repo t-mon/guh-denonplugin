@@ -20,11 +20,6 @@
                     ],
                     "paramTypes": [
                         {
-                            "name": "name",
-                            "type": "QString",
-                            "inputType": "TextLine"
-                        },
-                        {
                             "name": "ip",
                             "type" : "QString",
                             "inputType": "IPv4Address"
@@ -36,7 +31,7 @@
                             "id": "1cdb6b54-6831-4900-95b2-c78f64497701",
                             "idName": "power",
                             "type": "bool",
-                            "defaultValue": "false",
+                            "defaultValue": false,
                             "writable": true
                         },
                         {
@@ -45,7 +40,7 @@
                             "idName": "volume",
                             "type": "int",
                             "unit": "Dezibel",
-                            "defaultValue": "0",
+                            "defaultValue": 0,
                             "minValue": 0,
                             "maxValue": 80,
                             "writable": true

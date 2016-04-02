@@ -1,4 +1,3 @@
-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  *                                                                         *
  *  Copyright (C) 2015 Simon Stuerz <simon.stuerz@guh.guru>                *
@@ -23,7 +22,6 @@
 #include "denonconnection.h"
 #include "extern-plugininfo.h"
 
-#include <QPixmap>
 
 DenonConnection::DenonConnection(const QHostAddress &hostAddress, const int &port, QObject *parent) :
     QObject(parent),
@@ -33,10 +31,10 @@ DenonConnection::DenonConnection(const QHostAddress &hostAddress, const int &por
 {
     m_socket = new QTcpSocket(this);
 
-    connect(m_socket, &QTcpSocket::connected, this, &DenonConnection::onConnected);
-    connect(m_socket, &QTcpSocket::disconnected, this, &DenonConnection::onDisconnected);
+    connect(m_socket, SIGNAL(connected()), this, SLOT(onConnected()));
+    connect(m_socket, SIGNAL(disconnected()), this, SLOT(onDisconnected()));
     connect(m_socket, SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(onError(QAbstractSocket::SocketError)));
-    connect(m_socket, &QTcpSocket::readyRead, this, &DenonConnection::readData);
+    connect(m_socket, SIGNAL(readyRead()), this, SLOT(readData()));
 }
 
 void DenonConnection::connectDenon()
