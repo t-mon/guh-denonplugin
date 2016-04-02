@@ -21,10 +21,6 @@
 #include "deviceplugindenon.h"
 #include "plugininfo.h"
 
-#include <QTcpSocket>
-
-// Note: You can find the documentation for this code here -> http://dev.guh.guru/write-plugins.html
-
 // The constructor of this device plugin.
 DevicePluginDenon::DevicePluginDenon()
 {
@@ -37,10 +33,10 @@ DeviceManager::HardwareResources DevicePluginDenon::requiredHardware() const
 
 DeviceManager::DeviceSetupStatus DevicePluginDenon::setupDevice(Device *device)
 {
-
     qCDebug(dcDenon) << "Setup Denon device" << device->paramValue("ip").toString();
+
     m_connection = new DenonConnection(QHostAddress(device->paramValue("ip").toString()), 23, this);
-    connect (m_connection, &DenonConnection::connectionStatusChanged, this, &DevicePluginDenon::onConnectionChanged);
+    connect (m_connection, SIGNAL(connectionStatusChanged()), this, SLOT(onConnectionChanged()));
 
     //m_denons.insert(m_connection, device);
     m_asyncSetups.append(m_connection);
@@ -56,6 +52,11 @@ void DevicePluginDenon::deviceRemoved(Device *device)
     qCDebug(dcDenon) << "Delete " << device->name();
 }
 
+void DevicePluginDenon::networkManagerReplyReady(QNetworkReply *reply)
+{
+    Q_UNUSED(reply)
+}
+
 void DevicePluginDenon::guhTimer()
 {
     /*
@@ -68,6 +69,12 @@ void DevicePluginDenon::guhTimer()
             //denon->update();
         }
     }*/
+}
+
+void DevicePluginDenon::actionDataReady(const ActionId &actionId, const QByteArray &data)
+{
+    Q_UNUSED(actionId)
+    Q_UNUSED(data)
 }
 
 
@@ -132,7 +139,10 @@ DeviceManager::DeviceError DevicePluginDenon::executeAction(Device *device, cons
 void DevicePluginDenon::onConnectionChanged()
 {
 
+
+
 }
+
 
 
 

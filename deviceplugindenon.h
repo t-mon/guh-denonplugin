@@ -31,7 +31,6 @@
 
 #include "denonconnection.h"
 
-
 class DevicePluginDenon : public DevicePlugin
 {
     Q_OBJECT
@@ -65,10 +64,10 @@ private:
 
 private slots:
     void onConnectionChanged();
-    void onStateChanged();
-    void onActionExecuted(const ActionId &actionId, const bool &success);
-    void versionDataReceived(const QVariantMap &data);
-    void onSetupFinished(const QVariantMap &data);
+//    void onStateChanged();
+//    void onActionExecuted(const ActionId &actionId, const bool &success);
+//    void versionDataReceived(const QVariantMap &data);
+//    void onSetupFinished(const QVariantMap &data);
 };
 
 #endif // DEVICEPLUGINDENON_H
