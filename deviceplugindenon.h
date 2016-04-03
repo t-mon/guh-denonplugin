@@ -24,6 +24,7 @@
 #include "devicemanager.h"
 #include "plugin/deviceplugin.h"
 
+
 #include <QHash>
 #include <QNetworkReply>
 #include <QObject>
@@ -45,25 +46,32 @@ public:
     DeviceManager::DeviceSetupStatus setupDevice(Device *device) override;
     void deviceRemoved(Device *device) override;
 
-    void networkManagerReplyReady(QNetworkReply *reply) override;
-
     DeviceManager::DeviceError executeAction(Device *device, const Action &action) override;
 
-    void guhTimer();
+    DeviceManager::DeviceError discoverDevices(const DeviceClassId &deviceClassId, const ParamList &params) override;
+
+    void avahiDiscoveryFinished();
+
+    void guhTimer() override;
+
+
+
 private:
     QHash <ActionId, Device *> m_asyncActions;
     QHash <QNetworkReply *, ActionId> m_asyncActionReplies;
-
 
     DenonConnection *m_connection;
     QHash<DenonConnection *, Device *> m_denon;
     QList<DenonConnection *> m_asyncSetups;
 
-
     void actionDataReady(const ActionId &actionId, const QByteArray &data);
 
 private slots:
     void onConnectionChanged();
+    void onDataReceived(const QByteArray &data);
+    void onSetupFinished();
+    void onActionExecuted(const ActionId &actionId, const bool &success);
+
 //    void onStateChanged();
 //    void onActionExecuted(const ActionId &actionId, const bool &success);
 //    void versionDataReceived(const QVariantMap &data);

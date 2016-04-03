@@ -5,7 +5,7 @@
     "vendors": [
         {
             "id": "cf0a9644-2c13-4daf-85c1-ad88d6745b42",
-            "name": "denon",
+            "name": "Denon",
             "idName": "denon",
             "deviceClasses": [
                 {
@@ -13,7 +13,7 @@
                     "idName": "AVRX1000",
                     "name": "AVR X1000",
                     "createMethods": ["user"],
-                    "deviceIcon": "Energy",
+                    "deviceIcon": "Hifi",
                     "basicTags": [
                         "Device",
                         "Multimedia"
@@ -26,6 +26,12 @@
                         }
                     ],
                     "stateTypes": [
+                        {
+                            "id": "4d1790bf-28c6-4c1f-8892-ba1a0ef140f5",
+                            "idName": "connected",
+                            "name": "connected",
+                            "type": "bool"
+                        },
                         {
                             "name": "power",
                             "id": "1cdb6b54-6831-4900-95b2-c78f64497701",
@@ -44,12 +50,40 @@
                             "minValue": 0,
                             "maxValue": 80,
                             "writable": true
+                        },
+                        {
+                            "name": "channel",
+                            "id": "f29ffa2c-31d6-4d88-b160-a38288c82ce1",
+                            "idName": "channel",
+                            "type": "QString",
+                            "allowedValues": [
+                                "TUNER",
+                                "DVD",
+                                "BD",
+                                "TV",
+                                "SAT/CBL",
+                                "MPLAY",
+                                "GAME",
+                                "AUX1",
+                                "NET",
+                                "SPOTIFY",
+                                "FLICKR",
+                                "FAVORITES",
+                                "IRADIO",
+                                "SERVER",
+                                "USB/IPOD",
+                                "USB",
+                                "IPD",
+                                "IRP",
+                                "FVP"
+                            ],
+                            "defaultValue": "TUNER"
                         }
                     ],
                     "actionTypes": [
                         {
                             "name": "change channel",
-                            "id": "f29ffa2c-31d6-4d88-b160-a38288c82ce1",
+                            "id": "95ec4c43-64bb-4f09-b000-56f43d1d950e",
                             "idName": "changechannel",
                             "paramTypes": [
                                 {
@@ -64,6 +98,7 @@
                                         "MPLAY",
                                         "GAME",
                                         "AUX1",
+                                        "NET",
                                         "SPOTIFY",
                                         "FLICKR",
                                         "FAVORITES",

@@ -36,7 +36,11 @@ DeviceManager::DeviceSetupStatus DevicePluginDenon::setupDevice(Device *device)
     qCDebug(dcDenon) << "Setup Denon device" << device->paramValue("ip").toString();
 
     m_connection = new DenonConnection(QHostAddress(device->paramValue("ip").toString()), 23, this);
-    connect (m_connection, SIGNAL(connectionStatusChanged()), this, SLOT(onConnectionChanged()));
+    //connect (m_connection, SIGNAL(connectionStatusChanged()), this, SLOT(onConnectionChanged()));
+    connect(m_connection, &DenonConnection::connectionStatusChanged, this, &DevicePluginDenon::onConnectionChanged);
+    connect(m_connection, &DenonConnection::connectionStatusChanged, this, &DevicePluginDenon::onSetupFinished);
+    //connect(m_connection, &DenonConnection::, this, &DevicePluginDenon::onActionExecuted);
+    connect(m_connection, &DenonConnection::dataReady, this, &DevicePluginDenon::onDataReceived);
 
     //m_denons.insert(m_connection, device);
     m_asyncSetups.append(m_connection);
@@ -47,20 +51,51 @@ DeviceManager::DeviceSetupStatus DevicePluginDenon::setupDevice(Device *device)
     return DeviceManager::DeviceSetupStatusAsync;
 }
 
+DeviceManager::DeviceError DevicePluginDenon::discoverDevices(const DeviceClassId &deviceClassId, const ParamList &params)
+{
+    Q_UNUSED(params)
+    Q_UNUSED(deviceClassId)
+    qCDebug(dcDenon) << "Start UPnP search";
+    //upnpDiscover();
+    //avahi browse
+    return DeviceManager::DeviceErrorAsync;
+}
+
+void DevicePluginDenon::avahiDiscoveryFinished()
+{
+    QList<DeviceDescriptor> deviceDescriptors;
+    emit devicesDiscovered(AVRX1000DeviceClassId, deviceDescriptors);
+}
+
+
+void DevicePluginDenon::onSetupFinished()
+{
+    DenonConnection *denon = static_cast<DenonConnection *>(sender());
+    Device *device = m_denon.value(denon);
+
+    denon->sendData("PW?\r");
+    denon->sendData("SI?\r");
+    denon->sendData("MV?\r");
+
+    emit deviceSetupFinished(device, DeviceManager::DeviceSetupStatusSuccess);
+
+}
+
+
 void DevicePluginDenon::deviceRemoved(Device *device)
 {
     qCDebug(dcDenon) << "Delete " << device->name();
+    DenonConnection *denon = m_denon.key(device);
+    m_denon.remove(denon);
+    qCDebug(dcDenon) << "Delete " << device->name();
+    denon->disconnectDenon();
 }
 
-void DevicePluginDenon::networkManagerReplyReady(QNetworkReply *reply)
-{
-    Q_UNUSED(reply)
-}
 
 void DevicePluginDenon::guhTimer()
 {
-    /*
-    foreach (Denon *denon, m_denons.keys()) {
+
+    foreach (DenonConnection *denon, m_denon.keys()) {
         if (!denon->connected()) {
             denon->connectDenon();
             continue;
@@ -68,7 +103,7 @@ void DevicePluginDenon::guhTimer()
             // no need for polling information, notifications do the job
             //denon->update();
         }
-    }*/
+    }
 }
 
 void DevicePluginDenon::actionDataReady(const ActionId &actionId, const QByteArray &data)
@@ -99,15 +134,19 @@ DeviceManager::DeviceError DevicePluginDenon::executeAction(Device *device, cons
             qCDebug(dcDenon) << "set power action" << action.id();
             qCDebug(dcDenon) << "power: " << action.param("power").value().Bool;
 
-            if (action.param("power").value().Bool == true){
-                denon->sendData("PWON\r");
+            if (action.param("power").value().toBool() == true){
+                QByteArray cmd = "PWON\r";
+                qCDebug(dcDenon) << "Execute power: " << action.id() << cmd;
+                denon->sendData(cmd);
             } else {
-                denon->sendData("PWSTANDBY\r");
+                QByteArray cmd = "PWSTANDBY\r";
+                qCDebug(dcDenon) << "Execute power: " << action.id() << cmd;
+                denon->sendData(cmd);
             }
 
             // Tell the DeviceManager that this is an async action and the result of the execution will
             // be emitted later.
-            return DeviceManager::DeviceErrorAsync;
+            return DeviceManager::DeviceErrorNoError;
         } else if (action.actionTypeId() == volumeActionTypeId) {
 
             QByteArray vol = action.param("volume").value().toByteArray();
@@ -116,15 +155,19 @@ DeviceManager::DeviceError DevicePluginDenon::executeAction(Device *device, cons
             qCDebug(dcDenon) << "Execute volume" << action.id() << cmd;
             denon->sendData(cmd);
 
+            return DeviceManager::DeviceErrorNoError;
+
         } else if (action.actionTypeId() == changechannelActionTypeId) {
 
             qCDebug(dcDenon) << "Execute update action" << action.id();
 
             QByteArray channel = action.param("channel").value().toByteArray();
-            QByteArray cmd = "MS" + channel + "\r";
+            QByteArray cmd = "SI" + channel + "\r";
 
             qCDebug(dcDenon) << "Change to channel:" << cmd;
             denon->sendData(cmd);
+
+            return DeviceManager::DeviceErrorNoError;
 
         }
 
@@ -135,16 +178,55 @@ DeviceManager::DeviceError DevicePluginDenon::executeAction(Device *device, cons
     return DeviceManager::DeviceErrorDeviceClassNotFound;
 }
 
-
-void DevicePluginDenon::onConnectionChanged()
+void DevicePluginDenon::onActionExecuted(const ActionId &actionId, const bool &success)
 {
-
-
-
+    if (success) {
+        emit actionExecutionFinished(actionId, DeviceManager::DeviceErrorNoError);
+    } else {
+        emit actionExecutionFinished(actionId, DeviceManager::DeviceErrorInvalidParameter);
+    }
 }
 
 
+void DevicePluginDenon::onConnectionChanged()
+{
+    DenonConnection *denon = static_cast<DenonConnection *>(sender());
+    Device *device = m_denon.value(denon);
 
+    if (denon->connected()) {
+        // if this is the first setup, check version
+        if (m_asyncSetups.contains(denon)) {
+            m_asyncSetups.removeAll(denon);
+        }
+    }
+
+    device->setStateValue(connectedStateTypeId, denon->connected());
+}
+
+void DevicePluginDenon::onDataReceived(const QByteArray &data){
+
+    DenonConnection *denon = static_cast<DenonConnection *>(sender());
+    Device *device = m_denon.value(denon);
+
+    qDebug(dcDenon) << "Data received" << data;
+
+    if (data.contains("MV") && !data.contains("MAX")){
+        int vol = data.mid(2, 2).toInt();
+        qDebug(dcDenon) << "update volume:" << vol;
+        device->setStateValue(volumeStateTypeId, vol);
+    } else if(data.contains("SI")){
+        QString cmd = data.mid(2);
+        cmd.remove("\r");
+        qDebug(dcDenon) << "update channel:" << cmd;
+        device->setStateValue(channelStateTypeId, cmd);
+    } else if (data.contains("PWON")){
+        qDebug(dcDenon) << "update power on";
+        device->setStateValue(powerStateTypeId, false);
+    } else if (data.contains("PWSTANDBY")){
+        qDebug(dcDenon) << "update power off";
+        device->setStateValue(powerStateTypeId, true);
+    }
+}
 
 
 
