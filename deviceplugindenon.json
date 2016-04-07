@@ -56,7 +56,8 @@
                             "id": "f29ffa2c-31d6-4d88-b160-a38288c82ce1",
                             "idName": "channel",
                             "type": "QString",
-                            "allowedValues": [
+                            "writable": true,
+                            "possibleValues": [
                                 "TUNER",
                                 "DVD",
                                 "BD",
@@ -78,41 +79,6 @@
                                 "FVP"
                             ],
                             "defaultValue": "TUNER"
-                        }
-                    ],
-                    "actionTypes": [
-                        {
-                            "name": "change channel",
-                            "id": "95ec4c43-64bb-4f09-b000-56f43d1d950e",
-                            "idName": "changechannel",
-                            "paramTypes": [
-                                {
-                                    "name": "channel",
-                                    "type": "QString",
-                                    "allowedValues": [
-                                        "TUNER",
-                                        "DVD",
-                                        "BD",
-                                        "TV",
-                                        "SAT/CBL",
-                                        "MPLAY",
-                                        "GAME",
-                                        "AUX1",
-                                        "NET",
-                                        "SPOTIFY",
-                                        "FLICKR",
-                                        "FAVORITES",
-                                        "IRADIO",
-                                        "SERVER",
-                                        "USB/IPOD",
-                                        "USB",
-                                        "IPD",
-                                        "IRP",
-                                        "FVP"
-                                    ],
-                                    "defaultValue": "TUNER"
-                                }
-                            ]
                         }
                     ]
                 }

@@ -73,9 +73,8 @@ void DevicePluginDenon::onSetupFinished()
     DenonConnection *denon = static_cast<DenonConnection *>(sender());
     Device *device = m_denon.value(denon);
 
-    denon->sendData("PW?\r");
-    denon->sendData("SI?\r");
-    denon->sendData("MV?\r");
+    denon->sendData("PW?\rSI?\rMV?\r");
+
 
     emit deviceSetupFinished(device, DeviceManager::DeviceSetupStatusSuccess);
 
@@ -85,10 +84,18 @@ void DevicePluginDenon::onSetupFinished()
 void DevicePluginDenon::deviceRemoved(Device *device)
 {
     qCDebug(dcDenon) << "Delete " << device->name();
-    DenonConnection *denon = m_denon.key(device);
+    if (!m_denon.values().contains(device))
+        return;
+
+    QPointer<DenonConnection> denon = m_denon.key(device);
+
+    if (!denon.isNull()){
+        qCWarning(dcDenon) << "Invalid denon pointer" << device->id().toString();
+        return;
+    }
     m_denon.remove(denon);
     qCDebug(dcDenon) << "Delete " << device->name();
-    denon->disconnectDenon();
+    denon->deleteLater();
 }
 
 
@@ -100,8 +107,7 @@ void DevicePluginDenon::guhTimer()
             denon->connectDenon();
             continue;
         } else {
-            // no need for polling information, notifications do the job
-            //denon->update();
+            denon->sendData("PW?\rSI?\rMV?\r");
         }
     }
 }
@@ -157,7 +163,7 @@ DeviceManager::DeviceError DevicePluginDenon::executeAction(Device *device, cons
 
             return DeviceManager::DeviceErrorNoError;
 
-        } else if (action.actionTypeId() == changechannelActionTypeId) {
+        } else if (action.actionTypeId() == channelActionTypeId) {
 
             qCDebug(dcDenon) << "Execute update action" << action.id();
 
@@ -170,7 +176,6 @@ DeviceManager::DeviceError DevicePluginDenon::executeAction(Device *device, cons
             return DeviceManager::DeviceErrorNoError;
 
         }
-
 
         // ...otherwise the ActionType does not exist
         return DeviceManager::DeviceErrorActionTypeNotFound;
@@ -194,12 +199,12 @@ void DevicePluginDenon::onConnectionChanged()
     Device *device = m_denon.value(denon);
 
     if (denon->connected()) {
+
         // if this is the first setup, check version
         if (m_asyncSetups.contains(denon)) {
             m_asyncSetups.removeAll(denon);
         }
     }
-
     device->setStateValue(connectedStateTypeId, denon->connected());
 }
 
@@ -211,20 +216,68 @@ void DevicePluginDenon::onDataReceived(const QByteArray &data){
     qDebug(dcDenon) << "Data received" << data;
 
     if (data.contains("MV") && !data.contains("MAX")){
-        int vol = data.mid(2, 2).toInt();
+        int index = data.indexOf("MV");
+        int vol = data.mid(index+2, 2).toInt();
+
         qDebug(dcDenon) << "update volume:" << vol;
         device->setStateValue(volumeStateTypeId, vol);
-    } else if(data.contains("SI")){
-        QString cmd = data.mid(2);
-        cmd.remove("\r");
+    }
+
+    if(data.contains("SI")){
+
+        QString cmd = NULL;
+        if(data.contains("TUNER")){
+            cmd = "TUNER";
+        } else if(data.contains("DVD")){
+            cmd = "DVD";
+        } else if(data.contains("BD")){
+            cmd = "BD";
+        } else if(data.contains("TV")){
+            cmd = "TV";
+        } else if(data.contains("SAT/CBL")){
+            cmd = "SAT/CBL";
+        } else if(data.contains("MPLAY")){
+            cmd = "MPLAY";
+        } else if(data.contains("GAME")){
+            cmd = "GAME";
+        } else if(data.contains("AUX1")){
+            cmd = "AUX1";
+        } else if(data.contains("NET")){
+            cmd = "NET";
+        } else if(data.contains("PANDORA")){
+            cmd = "PANDORA";
+        } else if(data.contains("SIRIUSXM")){
+            cmd = "SIRIUSXM";
+        } else if(data.contains("SPOTIFY")){
+            cmd = "SPOTIFY";
+        } else if(data.contains("FLICKR")){
+            cmd = "FLICKR";
+        } else if(data.contains("FAVORITES")){
+            cmd = "FAVORITES";
+        } else if(data.contains("IRADIO")){
+            cmd = "IRADIO";
+        } else if(data.contains("SERVER")){
+            cmd = "SERVER";
+        } else if(data.contains("USB/IPOD")){
+            cmd = "USB/IPOD";
+        } else if(data.contains("IPD")){
+            cmd = "IPD";
+        } else if(data.contains("IRP")){
+            cmd = "IRP";
+        } else if(data.contains("FVP")){
+            cmd = "FVP";
+        }
+
         qDebug(dcDenon) << "update channel:" << cmd;
         device->setStateValue(channelStateTypeId, cmd);
-    } else if (data.contains("PWON")){
+    }
+
+    if (data.contains("PWON")){
         qDebug(dcDenon) << "update power on";
-        device->setStateValue(powerStateTypeId, false);
+        device->setStateValue(powerStateTypeId, true);
     } else if (data.contains("PWSTANDBY")){
         qDebug(dcDenon) << "update power off";
-        device->setStateValue(powerStateTypeId, true);
+        device->setStateValue(powerStateTypeId, false);
     }
 }
 
