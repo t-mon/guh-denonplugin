@@ -54,22 +54,19 @@ public:
 
     void guhTimer() override;
 
-
-
 private:
-    QHash <ActionId, Device *> m_asyncActions;
-    QHash <QNetworkReply *, ActionId> m_asyncActionReplies;
-
-    DenonConnection *m_connection;
     QHash<DenonConnection *, Device *> m_denon;
     QList<DenonConnection *> m_asyncSetups;
+
+    QHash <ActionId, Device *> m_asyncActions;
+    QHash <QNetworkReply *, ActionId> m_asyncActionReplies;
 
     void actionDataReady(const ActionId &actionId, const QByteArray &data);
 
 private slots:
     void onConnectionChanged();
     void onDataReceived(const QByteArray &data);
-    void onSetupFinished();
+    void onSocketError();
     void onActionExecuted(const ActionId &actionId, const bool &success);
 
 //    void onStateChanged();

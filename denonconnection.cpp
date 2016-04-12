@@ -68,22 +68,19 @@ bool DenonConnection::connected()
 void DenonConnection::onConnected()
 {
     qCDebug(dcDenon) << "connected successfully to" << hostAddress().toString() << port();
-    m_connected = true;
-    emit connectionStatusChanged();
+    setConnected(true);
 }
 
 void DenonConnection::onDisconnected()
 {
     qCDebug(dcDenon) << "disconnected from" << hostAddress().toString() << port();
-    m_connected = false;
-    emit connectionStatusChanged();
+    setConnected(false);
 }
 
 void DenonConnection::onError(QAbstractSocket::SocketError socketError)
 {
-    if (connected()) {
-        qCWarning(dcDenon) << "socket error:" << socketError << m_socket->errorString();
-    }
+    qCWarning(dcDenon) << "socket error:" << socketError << m_socket->errorString();
+    emit socketErrorOccured(socketError);
 }
 
 void DenonConnection::readData()
@@ -104,6 +101,12 @@ void DenonConnection::readData()
         }
         emit dataReady(command.toUtf8());
     }
+}
+
+void DenonConnection::setConnected(const bool &connected)
+{
+    m_connected = connected;
+    emit connectionStatusChanged();
 }
 
 void DenonConnection::sendData(const QByteArray &message)

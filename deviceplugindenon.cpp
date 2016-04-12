@@ -35,18 +35,20 @@ DeviceManager::DeviceSetupStatus DevicePluginDenon::setupDevice(Device *device)
 {
     qCDebug(dcDenon) << "Setup Denon device" << device->paramValue("ip").toString();
 
-    m_connection = new DenonConnection(QHostAddress(device->paramValue("ip").toString()), 23, this);
-    //connect (m_connection, SIGNAL(connectionStatusChanged()), this, SLOT(onConnectionChanged()));
-    connect(m_connection, &DenonConnection::connectionStatusChanged, this, &DevicePluginDenon::onConnectionChanged);
-    connect(m_connection, &DenonConnection::connectionStatusChanged, this, &DevicePluginDenon::onSetupFinished);
-    //connect(m_connection, &DenonConnection::, this, &DevicePluginDenon::onActionExecuted);
-    connect(m_connection, &DenonConnection::dataReady, this, &DevicePluginDenon::onDataReceived);
+    if (QHostAddress(device->paramValue("ip").toString()).isNull()) {
+        qCWarning(dcDenon()) << "Could not parse ip address" << device->paramValue("ip").toString();
+        return DeviceManager::DeviceSetupStatusFailure;
+    }
 
-    //m_denons.insert(m_connection, device);
-    m_asyncSetups.append(m_connection);
+    DenonConnection *connection = new DenonConnection(QHostAddress(device->paramValue("ip").toString()), 23, this);
+    connect(connection, &DenonConnection::connectionStatusChanged, this, &DevicePluginDenon::onConnectionChanged);
+    connect(connection, &DenonConnection::socketErrorOccured, this, &DevicePluginDenon::onSocketError);
+    connect(connection, &DenonConnection::dataReady, this, &DevicePluginDenon::onDataReceived);
 
-    m_connection->connectDenon();
-    m_denon.insert(m_connection, device);
+    m_asyncSetups.append(connection);
+    m_denon.insert(connection, device);
+
+    connection->connectDenon();
 
     return DeviceManager::DeviceSetupStatusAsync;
 }
@@ -66,20 +68,6 @@ void DevicePluginDenon::avahiDiscoveryFinished()
     QList<DeviceDescriptor> deviceDescriptors;
     emit devicesDiscovered(AVRX1000DeviceClassId, deviceDescriptors);
 }
-
-
-void DevicePluginDenon::onSetupFinished()
-{
-    DenonConnection *denon = static_cast<DenonConnection *>(sender());
-    Device *device = m_denon.value(denon);
-
-    denon->sendData("PW?\rSI?\rMV?\r");
-
-
-    emit deviceSetupFinished(device, DeviceManager::DeviceSetupStatusSuccess);
-
-}
-
 
 void DevicePluginDenon::deviceRemoved(Device *device)
 {
@@ -101,11 +89,9 @@ void DevicePluginDenon::deviceRemoved(Device *device)
 
 void DevicePluginDenon::guhTimer()
 {
-
     foreach (DenonConnection *denon, m_denon.keys()) {
         if (!denon->connected()) {
             denon->connectDenon();
-            continue;
         } else {
             denon->sendData("PW?\rSI?\rMV?\r");
         }
@@ -118,7 +104,6 @@ void DevicePluginDenon::actionDataReady(const ActionId &actionId, const QByteArr
     Q_UNUSED(data)
 }
 
-
 // This method will be called whenever a client or the rule engine wants to execute an action for the given device.
 DeviceManager::DeviceError DevicePluginDenon::executeAction(Device *device, const Action &action)
 {
@@ -128,9 +113,8 @@ DeviceManager::DeviceError DevicePluginDenon::executeAction(Device *device, cons
         DenonConnection *denon = m_denon.key(device);
 
         // check connection state
-        if (!denon->connected()) {
+        if (!denon->connected())
             return DeviceManager::DeviceErrorHardwareNotAvailable;
-        }
 
 
         // check if the requested action is our "update" action ...
@@ -199,16 +183,18 @@ void DevicePluginDenon::onConnectionChanged()
     Device *device = m_denon.value(denon);
 
     if (denon->connected()) {
-
         // if this is the first setup, check version
         if (m_asyncSetups.contains(denon)) {
             m_asyncSetups.removeAll(denon);
+            denon->sendData("PW?\rSI?\rMV?\r");
+            emit deviceSetupFinished(device, DeviceManager::DeviceSetupStatusSuccess);
         }
     }
     device->setStateValue(connectedStateTypeId, denon->connected());
 }
 
-void DevicePluginDenon::onDataReceived(const QByteArray &data){
+void DevicePluginDenon::onDataReceived(const QByteArray &data)
+{
 
     DenonConnection *denon = static_cast<DenonConnection *>(sender());
     Device *device = m_denon.value(denon);
@@ -268,16 +254,30 @@ void DevicePluginDenon::onDataReceived(const QByteArray &data){
             cmd = "FVP";
         }
 
-        qDebug(dcDenon) << "update channel:" << cmd;
+        qDebug(dcDenon) << "Update channel:" << cmd;
         device->setStateValue(channelStateTypeId, cmd);
     }
 
     if (data.contains("PWON")){
-        qDebug(dcDenon) << "update power on";
+        qDebug(dcDenon) << "Update power on";
         device->setStateValue(powerStateTypeId, true);
     } else if (data.contains("PWSTANDBY")){
-        qDebug(dcDenon) << "update power off";
+        qDebug(dcDenon) << "Update power off";
         device->setStateValue(powerStateTypeId, false);
+    }
+}
+
+void DevicePluginDenon::onSocketError()
+{
+    DenonConnection *denon = static_cast<DenonConnection *>(sender());
+    Device *device = m_denon.value(denon);
+
+    // Check if setup running for this device
+    if (m_asyncSetups.contains(denon)) {
+        emit deviceSetupFinished(device, DeviceManager::DeviceSetupStatusFailure);
+        // Remove if setup failed
+        m_denon.remove(denon);
+        denon->deleteLater();
     }
 }
 
