@@ -52,7 +52,10 @@ private slots:
     void onError(QAbstractSocket::SocketError socketError);
     void readData();
 
+    void setConnected(const bool &connected);
+
 signals:
+    void socketErrorOccured(QAbstractSocket::SocketError socketError);
     void connectionStatusChanged();
     void dataReady(const QByteArray &data);
 
