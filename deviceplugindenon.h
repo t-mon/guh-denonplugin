@@ -26,9 +26,10 @@
 
 
 #include <QHash>
-#include <QNetworkReply>
 #include <QObject>
+#include <QPointer>
 #include <QHostAddress>
+#include <QNetworkReply>
 
 #include "denonconnection.h"
 
@@ -47,32 +48,20 @@ public:
     void deviceRemoved(Device *device) override;
 
     DeviceManager::DeviceError executeAction(Device *device, const Action &action) override;
-
-    DeviceManager::DeviceError discoverDevices(const DeviceClassId &deviceClassId, const ParamList &params) override;
-
-    void avahiDiscoveryFinished();
-
     void guhTimer() override;
 
 private:
-    QHash<DenonConnection *, Device *> m_denon;
+    QPointer<Device> m_device;
+    QPointer<DenonConnection> m_denonConnection;
     QList<DenonConnection *> m_asyncSetups;
 
     QHash <ActionId, Device *> m_asyncActions;
     QHash <QNetworkReply *, ActionId> m_asyncActionReplies;
 
-    void actionDataReady(const ActionId &actionId, const QByteArray &data);
-
 private slots:
     void onConnectionChanged();
     void onDataReceived(const QByteArray &data);
     void onSocketError();
-    void onActionExecuted(const ActionId &actionId, const bool &success);
-
-//    void onStateChanged();
-//    void onActionExecuted(const ActionId &actionId, const bool &success);
-//    void versionDataReceived(const QVariantMap &data);
-//    void onSetupFinished(const QVariantMap &data);
 };
 
 #endif // DEVICEPLUGINDENON_H

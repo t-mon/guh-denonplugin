@@ -22,7 +22,6 @@
 #include "denonconnection.h"
 #include "extern-plugininfo.h"
 
-
 DenonConnection::DenonConnection(const QHostAddress &hostAddress, const int &port, QObject *parent) :
     QObject(parent),
     m_hostAddress(hostAddress),
@@ -31,10 +30,16 @@ DenonConnection::DenonConnection(const QHostAddress &hostAddress, const int &por
 {
     m_socket = new QTcpSocket(this);
 
-    connect(m_socket, SIGNAL(connected()), this, SLOT(onConnected()));
-    connect(m_socket, SIGNAL(disconnected()), this, SLOT(onDisconnected()));
+    connect(m_socket, &QTcpSocket::connected, this, &DenonConnection::onConnected);
+    connect(m_socket, &QTcpSocket::disconnected, this, &DenonConnection::onDisconnected);
+    connect(m_socket, &QTcpSocket::readyRead, this, &DenonConnection::readData);
+    // Note: error signal will be interpreted as function, not as signal in C++11
     connect(m_socket, SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(onError(QAbstractSocket::SocketError)));
-    connect(m_socket, SIGNAL(readyRead()), this, SLOT(readData()));
+}
+
+DenonConnection::~DenonConnection()
+{
+    m_socket->close();
 }
 
 void DenonConnection::connectDenon()
@@ -63,6 +68,11 @@ int DenonConnection::port() const
 bool DenonConnection::connected()
 {
     return m_connected;
+}
+
+void DenonConnection::sendData(const QByteArray &message)
+{
+    m_socket->write(message);
 }
 
 void DenonConnection::onConnected()
@@ -107,9 +117,4 @@ void DenonConnection::setConnected(const bool &connected)
 {
     m_connected = connected;
     emit connectionStatusChanged();
-}
-
-void DenonConnection::sendData(const QByteArray &message)
-{
-    m_socket->write(message);
 }

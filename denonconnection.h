@@ -30,6 +30,7 @@ class DenonConnection : public QObject
     Q_OBJECT
 public:
     explicit DenonConnection(const QHostAddress &hostAddress, const int &port = 23, QObject *parent = 0);
+    ~DenonConnection();
 
     void connectDenon();
     void disconnectDenon();
@@ -38,6 +39,8 @@ public:
     int port() const;
 
     bool connected();
+
+    void sendData(const QByteArray &message);
 
 private:
     QTcpSocket *m_socket;
@@ -58,9 +61,6 @@ signals:
     void socketErrorOccured(QAbstractSocket::SocketError socketError);
     void connectionStatusChanged();
     void dataReady(const QByteArray &data);
-
-public slots:
-    void sendData(const QByteArray &message);
 
 };
 
